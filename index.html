@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validação de Autenticidade</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f0f0f0;
+      color: #000000;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background-color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #logo {
+      height: 70px;
+      width: auto;
+    }
+    #title {
+      font-size: 2em;
+      font-weight: bold;
+      color: #03A859;
+    }
+    main {
+      width: 100%;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    .codigo-input {
+      width: 55px;
+      text-align: center;
+      font-size: 18px;
+      padding: 10px;
+      margin: 0 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #codigo-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background-color: #03A859;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #02884a;
+    }
+    #validation-result {
+      margin-top: 20px;
+    }
+    img {
+      width: 400px;
+      height: auto;
+      margin-right: 10px;
+    }
+    .card-images {
+      display: flex;
+
+    }
+
+    /* Responsividade para celulares */
+    @media (max-width: 768px) {
+        main {
+      width: 85%;}
+      #logo {
+        height: 50px;
+        width: auto;
+      }
+      #title {
+        font-size: 1.5em;
+        text-align: center;
+      }
+      .card-images {
+        flex-direction: column;
+        align-items: center;
+      }
+      img {
+        width: 100%; /* Imagens ocupam 100% da largura disponível no celular */
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="Logo" id="logo">
+    <div id="title">Validação de Autenticidade</div>
+  </header>
+  <main>
+    <div id="validation-section">
+      <label for="codigo">Digite o código de autenticidade:</label>
+      <div id="codigo-wrapper">
+        <input type="text" class="codigo-input" maxlength="4" id="codigo1" oninput="moveNext(this, 'codigo2')">
+        <input type="text" class="codigo-input" maxlength="4" id="codigo2" oninput="moveNext(this, 'codigo3')">
+        <input type="text" class="codigo-input" maxlength="4" id="codigo3" oninput="moveNext(this, 'codigo4')">
+        <input type="text" class="codigo-input" maxlength="4" id="codigo4">
+      </div>
+      <button onclick="validarCodigo()">Validar</button>
+    </div>
+
+    <div id="validation-result"></div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const codigoUrl = urlParams.get('codigo');
+      if (codigoUrl) {
+        validarCodigo(codigoUrl);  // Se o código vier pela URL, já valida automaticamente
+      }
+    });
+
+    function moveNext(current, nextId) {
+      if (current.value.length === 4) {
+        document.getElementById(nextId).focus();
+      }
+    }
+
+    function validarCodigo(codigo = null) {
+      if (!codigo) {
+        const codigo1 = document.getElementById('codigo1').value;
+        const codigo2 = document.getElementById('codigo2').value;
+        const codigo3 = document.getElementById('codigo3').value;
+        const codigo4 = document.getElementById('codigo4').value;
+
+        codigo = `${codigo1}-${codigo2}-${codigo3}-${codigo4}`;
+      }
+
+      if (!/^\d{4}-\d{4}-\d{4}-\d{4}$/.test(codigo)) {
+        alert("Formato de código inválido. Use o formato xxxx-xxxx-xxxx-xxxx.");
+        return;
+      }
+
+      // Carregar o arquivo CSV e verificar o código de autenticidade
+      fetch('https://site.univar.io/validador/dados.csv')
+        .then(response => response.text())
+        .then(csvText => {
+          const lines = csvText.split('\n').slice(1); // Ignora a linha de cabeçalho
+          let found = false;
+
+          for (let line of lines) {
+            const columns = line.split(',');
+            if (columns.length >= 8) { // Certifica-se de que existem todas as colunas necessárias
+              const [nome, cpf, dataEmissao, unidade, cursoModalidade, urlFrente, urlVerso, codigoAutenticidade] = columns;
+              
+              if (codigoAutenticidade && codigoAutenticidade.trim() === codigo) { // Comparar com o código de autenticidade
+                document.getElementById('validation-result').innerHTML = `
+                  <p><strong>Nome:</strong> ${nome}</p>
+                  <p><strong>CPF:</strong> ${cpf}</p>
+                  <p><strong>Data de emissão:</strong> ${dataEmissao}</p>
+                  <p><strong>Unidade:</strong> ${unidade}</p>
+                  <p><strong>Curso - Modalidade:</strong> ${cursoModalidade}</p>
+                  <p><strong>Validade:</strong> 31/03/${new Date().getFullYear() + 1}</p>
+                  <div class="card-images">
+                    <img src="${urlFrente}" alt="Frente da carteirinha">
+                    <img src="${urlVerso}" alt="Verso da carteirinha">
+                  </div>
+                `;
+                found = true;
+                break;
+              }
+            }
+          }
+
+          if (!found) {
+            document.getElementById('validation-result').innerHTML = `<p>Código não encontrado.</p>`;
+          } else {
+            document.getElementById('validation-section').style.display = 'none';  // Oculta o campo de validação após a verificação
+          }
+        })
+        .catch(error => console.error('Erro ao carregar o arquivo CSV:', error));
+    }
+  </script>
+</body>
+</html>
